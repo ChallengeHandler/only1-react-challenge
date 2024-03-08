@@ -30,12 +30,12 @@ const KEY_CODES = {
 function useAutoComplete({ delay = 500, source, onChange }: { delay: number, source: QueryFunction, onChange: OnChangeFunction }) {
   const listRef = useRef<HTMLUListElement>(null)
   const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [hasSuggestions, setHasSuggestions] = useState(false)
   const [textValue, setTextValue] = useState("")
-  const { isPending, error, data: suggestions, isFetching } = useQuery<DataType[]>({
+  const { isPending, data: suggestions, isFetching } = useQuery<DataType[]>({
     initialData: [],
     queryKey: ['query', textValue],
-    queryFn: () => source(textValue),
-    retryDelay: 500
+    queryFn: () => source(textValue)
   })
 
   function selectOption(index: number) {
@@ -48,11 +48,13 @@ function useAutoComplete({ delay = 500, source, onChange }: { delay: number, sou
 
   function clearSuggestions() {
     setSelectedIndex(-1)
+    setHasSuggestions(false)
   }
 
   function onTextChange(searchTerm: string) {
     setTextValue(searchTerm)
-    clearSuggestions();
+    clearSuggestions()
+    setHasSuggestions(true)
   }
 
 
@@ -127,7 +129,7 @@ function useAutoComplete({ delay = 500, source, onChange }: { delay: number, sou
       ref: listRef
     },
     isBusy: isPending || isFetching,
-    suggestions,
+    suggestions: hasSuggestions ? suggestions : [],
     selectedIndex,
   }
 }
