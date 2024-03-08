@@ -1,6 +1,4 @@
-// import { FC, useState } from 'react'
-// import { useQuery } from '@tanstack/react-query'
-
+import { useQuery } from '@tanstack/react-query'
 import { useRef, useState, KeyboardEvent, ChangeEvent, MouseEvent } from 'react'
 import { DataType, searchQuery } from '../services/searchQuery'
 
@@ -30,19 +28,15 @@ const KEY_CODES = {
     "ENTER": 13,
 }
 function useAutoComplete({ delay = 500, source, onChange }: { delay: number, source: QueryFunction, onChange: OnChangeFunction }) {
-    const [myTimeout, setMyTimeOut] = useState(setTimeout(() => { }, 0))
     const listRef = useRef<HTMLUListElement>(null)
-    const [suggestions, setSuggestions] = useState<DataType[]>([])
-    const [isBusy, setBusy] = useState(false)
     const [selectedIndex, setSelectedIndex] = useState(-1)
     const [textValue, setTextValue] = useState("")
-
-    function delayInvoke(cb: () => void) {
-        if (myTimeout) {
-            clearTimeout(myTimeout)
-        }
-        setMyTimeOut(setTimeout(cb, delay));
-    }
+    const { isPending, error, data: suggestions, isFetching } = useQuery<DataType[]>({
+      initialData: [],
+      queryKey: ['query', textValue],
+      queryFn: () => source(textValue),
+      retryDelay: 500
+    })
 
     function selectOption(index: number) {
         if (index > -1) {
@@ -52,26 +46,13 @@ function useAutoComplete({ delay = 500, source, onChange }: { delay: number, sou
         clearSuggestions()
     }
 
-    async function getSuggestions(searchTerm: string) {
-        if (searchTerm && source) {
-            const options = await source(searchTerm)
-            setSuggestions(options)
-        }
-    }
-
     function clearSuggestions() {
-        setSuggestions([])
         setSelectedIndex(-1)
     }
 
     function onTextChange(searchTerm: string) {
-        setBusy(true)
         setTextValue(searchTerm)
         clearSuggestions();
-        delayInvoke(async () => {
-            await getSuggestions(searchTerm)
-            setBusy(false)
-        });
     }
 
 
@@ -145,7 +126,7 @@ function useAutoComplete({ delay = 500, source, onChange }: { delay: number, sou
         bindOptions: {
             ref: listRef
         },
-        isBusy,
+        isBusy: isPending || isFetching,
         suggestions,
         selectedIndex,
     }
