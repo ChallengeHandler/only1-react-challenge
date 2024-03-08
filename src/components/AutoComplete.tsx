@@ -20,158 +20,151 @@ type OnChangeFunction = (value: DataType) => void
 
 
 const KEY_CODES = {
-    "DOWN": 40,
-    "UP": 38,
-    "PAGE_DOWN": 34,
-    "ESCAPE": 27,
-    "PAGE_UP": 33,
-    "ENTER": 13,
+  "DOWN": 40,
+  "UP": 38,
+  "PAGE_DOWN": 34,
+  "ESCAPE": 27,
+  "PAGE_UP": 33,
+  "ENTER": 13,
 }
 function useAutoComplete({ delay = 500, source, onChange }: { delay: number, source: QueryFunction, onChange: OnChangeFunction }) {
-    const listRef = useRef<HTMLUListElement>(null)
-    const [selectedIndex, setSelectedIndex] = useState(-1)
-    const [textValue, setTextValue] = useState("")
-    const { isPending, error, data: suggestions, isFetching } = useQuery<DataType[]>({
-      initialData: [],
-      queryKey: ['query', textValue],
-      queryFn: () => source(textValue),
-      retryDelay: 500
-    })
+  const listRef = useRef<HTMLUListElement>(null)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+  const [textValue, setTextValue] = useState("")
+  const { isPending, error, data: suggestions, isFetching } = useQuery<DataType[]>({
+    initialData: [],
+    queryKey: ['query', textValue],
+    queryFn: () => source(textValue),
+    retryDelay: 500
+  })
 
-    function selectOption(index: number) {
-        if (index > -1) {
-            onChange(suggestions[index])
-            setTextValue(suggestions[index].label)
-        }
-        clearSuggestions()
+  function selectOption(index: number) {
+    if (index > -1) {
+      onChange(suggestions[index])
+      setTextValue(suggestions[index].label)
     }
+    clearSuggestions()
+  }
 
-    function clearSuggestions() {
-        setSelectedIndex(-1)
+  function clearSuggestions() {
+    setSelectedIndex(-1)
+  }
+
+  function onTextChange(searchTerm: string) {
+    setTextValue(searchTerm)
+    clearSuggestions();
+  }
+
+
+  const optionHeight = listRef?.current?.children[0]?.clientHeight
+
+  function scrollUp() {
+    if (selectedIndex > 0) {
+      setSelectedIndex(selectedIndex - 1)
     }
-
-    function onTextChange(searchTerm: string) {
-        setTextValue(searchTerm)
-        clearSuggestions();
+    if (listRef.current != undefined && optionHeight != undefined) {
+      listRef.current.scrollTop -= optionHeight
     }
+  }
 
-
-    const optionHeight = listRef?.current?.children[0]?.clientHeight
-
-    function scrollUp() {
-        if (selectedIndex > 0) {
-            setSelectedIndex(selectedIndex - 1)
-        }
-        if (listRef.current != undefined && optionHeight != undefined) {
-          listRef.current.scrollTop -= optionHeight
-        }
+  function scrollDown() {
+    if (selectedIndex < suggestions.length - 1) {
+      setSelectedIndex(selectedIndex + 1)
     }
-
-    function scrollDown() {
-        if (selectedIndex < suggestions.length - 1) {
-            setSelectedIndex(selectedIndex + 1)
-        }
-        if (listRef.current != undefined && optionHeight != undefined) {
-          listRef.current.scrollTop = selectedIndex * optionHeight
-        }
+    if (listRef.current != undefined && optionHeight != undefined) {
+      listRef.current.scrollTop = selectedIndex * optionHeight
     }
+  }
 
-    function pageDown() {
-        setSelectedIndex(suggestions.length - 1)
-        if (listRef.current != undefined && optionHeight != undefined) {
-          listRef.current.scrollTop = suggestions.length * optionHeight
-        }
+  function pageDown() {
+    setSelectedIndex(suggestions.length - 1)
+    if (listRef.current != undefined && optionHeight != undefined) {
+      listRef.current.scrollTop = suggestions.length * optionHeight
     }
+  }
 
-    function pageUp() {
-        setSelectedIndex(0)
+  function pageUp() {
+    setSelectedIndex(0)
+    if (listRef.current != undefined) {
+      listRef.current.scrollTop = 0
+    }
+  }
+
+  function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    const keyOperation = {
+      [KEY_CODES.DOWN]: scrollDown,
+      [KEY_CODES.UP]: scrollUp,
+      [KEY_CODES.ENTER]: () => selectOption(selectedIndex),
+      [KEY_CODES.ESCAPE]: clearSuggestions,
+      [KEY_CODES.PAGE_DOWN]: pageDown,
+      [KEY_CODES.PAGE_UP]: pageUp,
+    }
+    if (keyOperation[e.keyCode]) {
+      keyOperation[e.keyCode]()
+    } else {
+      setSelectedIndex(-1)
+    }
+  }
+
+  return {
+    bindOption: {
+      onClick: (e: MouseEvent<HTMLLIElement>) => {
         if (listRef.current != undefined) {
-          listRef.current.scrollTop = 0
+          let nodes = Array.from(listRef.current.children);
+          const node = (e.target as HTMLElement).closest("li");
+          if (node != null) {
+            selectOption(nodes.indexOf(node))
+          }
         }
-    }
-
-    function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-        const keyOperation = {
-            [KEY_CODES.DOWN]: scrollDown,
-            [KEY_CODES.UP]: scrollUp,
-            [KEY_CODES.ENTER]: () => selectOption(selectedIndex),
-            [KEY_CODES.ESCAPE]: clearSuggestions,
-            [KEY_CODES.PAGE_DOWN]: pageDown,
-            [KEY_CODES.PAGE_UP]: pageUp,
-        }
-        if (keyOperation[e.keyCode]) {
-            keyOperation[e.keyCode]()
-        } else {
-            setSelectedIndex(-1)
-        }
-    }
-
-    return {
-        bindOption: {
-            onClick: (e: MouseEvent<HTMLLIElement>) => {
-              if (listRef.current != undefined) {
-                let nodes = Array.from(listRef.current.children);
-                const node = (e.target as HTMLElement).closest("li");
-                if (node != null) {
-                  selectOption(nodes.indexOf(node))
-                }
-              }
-            }
-        },
-        bindInput: {
-            value: textValue,
-            onChange: (e: ChangeEvent<HTMLInputElement>) => onTextChange(e.target.value),
-            onKeyDown
-        },
-        bindOptions: {
-            ref: listRef
-        },
-        isBusy: isPending || isFetching,
-        suggestions,
-        selectedIndex,
-    }
+      }
+    },
+    bindInput: {
+      value: textValue,
+      onChange: (e: ChangeEvent<HTMLInputElement>) => onTextChange(e.target.value),
+      onKeyDown
+    },
+    bindOptions: {
+      ref: listRef
+    },
+    isBusy: isPending || isFetching,
+    suggestions,
+    selectedIndex,
+  }
 }
-
-const Options = [
-  { value: "1", label: "John" },
-  { value: "2", label: "Jack" },
-  { value: "3", label: "Jane" },
-  { value: "4", label: "Mike" },
-]
 
 export default function AutoComplete() {
 
-   const { bindInput, bindOptions,  bindOption, isBusy, suggestions, selectedIndex} = useAutoComplete({
-      onChange: value => console.log(value),
-      source: (search) => searchQuery(search),
-      delay: 500
+  const { bindInput, bindOptions, bindOption, isBusy, suggestions, selectedIndex } = useAutoComplete({
+    onChange: value => console.log(value),
+    source: (search) => searchQuery(search),
+    delay: 500
   })
 
-     return (
-      <div className="p-2 border" >
-          <div className="flex items-center w-full">
-              <input
-                  placeholder='Search'
-                  className="flex-grow px-1 outline-none"
-                  {...bindInput}
-              />
-              {isBusy && <div className="w-4 h-4 border-2 border-dashed rounded-full border-slate-500 animate-spin"></div>}
-          </div>
-          <ul {...bindOptions} className="w-[300px] scroll-smooth absolute max-h-[260px] overflow-x-hidden overflow-y-auto" >
-              {
-                  suggestions.map((_, index) => (
-                      <li
-                          className={`flex items-center h-[40px] p-1 hover:bg-slate-300 ` + (selectedIndex === index && "bg-slate-300")}
-                          key={index}
-                          {...bindOption}
-                      >
-                          <div className="flex items-center space-x-1">
-                              <div>{suggestions[index].label}</div>
-                          </div>
-                      </li>
-                  ))
-              }
-          </ul>
+  return (
+    <div className="p-2 border" >
+      <div className="flex items-center w-full">
+        <input
+          placeholder='Search'
+          className="flex-grow px-1 outline-none"
+          {...bindInput}
+        />
+        {isBusy && <div className="w-4 h-4 border-2 border-dashed rounded-full border-slate-500 animate-spin"></div>}
       </div>
+      <ul {...bindOptions} className="w-[300px] scroll-smooth absolute max-h-[260px] overflow-x-hidden overflow-y-auto" >
+        {
+          suggestions.map((_, index) => (
+            <li
+              className={`flex items-center h-[40px] p-1 hover:bg-slate-300 ` + (selectedIndex === index && "bg-slate-300")}
+              key={index}
+              {...bindOption}
+            >
+              <div className="flex items-center space-x-1">
+                <div>{suggestions[index].label}</div>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
   )
 }
