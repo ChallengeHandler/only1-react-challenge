@@ -68,8 +68,8 @@ function useAutoComplete({ delay = 500, source, onChange }: { delay: number, sou
         setBusy(true)
         setTextValue(searchTerm)
         clearSuggestions();
-        delayInvoke(() => {
-            getSuggestions(searchTerm)
+        delayInvoke(async () => {
+            await getSuggestions(searchTerm)
             setBusy(false)
         });
     }
