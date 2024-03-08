@@ -5,20 +5,6 @@ import { DataType, searchQuery } from '../services/searchQuery'
 type QueryFunction = (query: string) => Promise<Array<DataType>>
 type OnChangeFunction = (value: DataType) => void
 
-
-// interface AutoCompleteProps {
-//   queryFn: QueryFunction
-// }
-
-// const AutoComplete: FC<AutoCompleteProps> = ({ queryFn }) => {
-//   const { isPending, error, data, isFetching } = useQuery({
-//     queryKey: ['repoData'],
-//     queryFn: () => queryFn('df')
-//   })
-//   return <></>
-// }
-
-
 const KEY_CODES = {
   "DOWN": 40,
   "UP": 38,
@@ -32,10 +18,11 @@ function useAutoComplete({ delay = 500, source, onChange }: { delay: number, sou
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const [hasSuggestions, setHasSuggestions] = useState(false)
   const [textValue, setTextValue] = useState("")
+  const [query, setQuery] = useState("")
   const { isPending, data: suggestions, isFetching } = useQuery<DataType[]>({
     initialData: [],
-    queryKey: ['query', textValue],
-    queryFn: () => source(textValue)
+    queryKey: ['query', query],
+    queryFn: () => source(query)
   })
 
   function selectOption(index: number) {
@@ -53,6 +40,7 @@ function useAutoComplete({ delay = 500, source, onChange }: { delay: number, sou
 
   function onTextChange(searchTerm: string) {
     setTextValue(searchTerm)
+    setQuery(searchTerm)
     clearSuggestions()
     setHasSuggestions(true)
   }
